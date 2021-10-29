@@ -41,33 +41,35 @@ export const createAuthUser = functions.auth.user().onCreate(async (user: UserRe
         throw new Error('Unable to create user from Firebase into Hasura')
     }
 
-    const claims = updateRoles(user)
+    const claims = await updateRoles(user.uid)
     return admin.auth().setCustomUserClaims(user.uid, claims)
 })
 
-export const updateAuthUser = functions.firestore.document('user/{userId}').onUpdate((user) => {
+export const updateAuthUser = functions.firestore.document('user/{userId}').onUpdate(async (user) => {
+
     admin.auth().updateUser(user.after.id, {
         'displayName': user.after.data().displayName,
         'email': user.after.data().email,
         'disabled': user.after.data().disabled,
     })
 
-    const claims = updateRoles(user)
+    const claims = await updateRoles(user.after.id)
 
     return admin.auth().setCustomUserClaims(user.after.id, claims)
 })
 
-const updateRoles = (user: any) => {
+const updateRoles = async (userUid: any) => {
+
     const defaultClaims = {
-        'x-hasura-default-role': 'user',
-        'x-hasura-allowed-roles': ['user'],
-        'x-hasura-user-id': user.uid,
+        'x-hasura-default-role': '',
+        'x-hasura-allowed-roles': [''],
+        'x-hasura-user-id': userUid,
     }
 
-    const additionalClaims = admin.firestore().collection('user').doc(user.uid).get().then((doc) => {
+    const additionalClaims = await admin.firestore().collection('user').doc(userUid).get().then((doc) => {
         if (!doc) { return {} }
         const data = doc.data()
-        console.log(`${user.uid} has custom claims`, data)
+        console.log(`${userUid} has custom claims`, data)
         return data!.roles
     })
 
