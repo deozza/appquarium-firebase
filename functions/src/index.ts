@@ -16,7 +16,13 @@ const client = new GraphQLClient('https://appquarium.hasura.app/v1/graphql', {
 export const createAuthUser = functions.auth.user().onCreate(async (user: UserRecord) => {
 
     await admin.firestore().collection('user').doc(user.uid).set({
-        'roles' : {},
+        'roles' : {
+            'x-hasura-default-role': 'user',
+            'x-hasura-allowed-roles': [
+                'user'
+            ],
+            'x-hasura-user': 'true'
+        },
         'displayName': user.displayName,
         'email': user.email,
         'disabled': user.disabled,
@@ -93,6 +99,6 @@ export const deleteAuthUser = functions.auth.user().onDelete(async (user: UserRe
         })
 
     } catch (e) {
-        throw new Error('Unable to create user from Firebase into Hasura')
+        throw new Error('Unable to delete hasura user with Firebase uid')
     }
 })
